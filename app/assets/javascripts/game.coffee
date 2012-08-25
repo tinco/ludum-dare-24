@@ -44,9 +44,16 @@ $ ->
 @currentOrientation = {}
 
 @intendMove = (direction) ->
-  @currentDirection = {}
+  if not @currentDirection?
+    @currentDirection = {}
   @currentDirection[direction] = true
-  @move(@currentDirection)
+
+  if not @moveTimer?
+    @moveTimer = setTimeout(( =>
+        @move(@currentDirection)
+        @moveTimer = undefined
+        @currentDirection = {}
+    ),50)
 
 @intendLook = (direction) ->
   @currentOrientation = {}
@@ -84,17 +91,27 @@ $ ->
   x = @thePlayer.position.x
   y = @thePlayer.position.y
   @board[x][y] = dropFromArray(@board[x][y], @thePlayer)
+  even = y % 2 == 0
+  odd = y % 2 == 1
   if direction.up
     y -= 1
-  if direction.down
+    if direction.left && odd
+        x -= 1
+    if direction.right && even
+        x += 1
+  else if direction.down
     y += 1
-  if direction.left
+    if direction.left && odd
+        x -= 1
+    if direction.right && even
+        x += 1
+  else if direction.left
     x -= 1
-  if direction.right
+  else if direction.right
     x += 1
-  if direction.x
+  else if direction.x
     x = direction.x
-  if direction.y
+  else if direction.y
     y = direction.y
 
   @thePlayer.position.x = x
