@@ -53,12 +53,19 @@ $ ->
         @move(@currentDirection)
         @moveTimer = undefined
         @currentDirection = {}
-    ),50)
+    ),20)
 
 @intendLook = (direction) ->
-  @currentOrientation = {}
+  if not @currentOrientation?
+    @currentOrientation = {}
   @currentOrientation[direction] = true
-  @look(@currentOrientation)
+
+  if not @moveTimer?
+    @lookTimer = setTimeout(( =>
+        @look(@currentOrientation)
+        @lookTimer = undefined
+        @currentOrientation = {}
+    ),50)
 
 @intendAttack = (type,target) ->
   @attack(type, target)
@@ -67,14 +74,24 @@ $ ->
   p = @thePlayer.position
   o = @thePlayer.orientation
   dx = dy = 0
-  if o == 0
-      dy = 1
-  if o == 1
-      dy = -1
-  if o == .5
-      dx = 1
-  if o == 1.5
-      dx = -1
+  even = p.y % 2 == 0
+  odd = p.y % 2 == 1
+  if o == -.25 || o == .25
+    dy -= 1
+    if o == -.25 && odd
+        dx -= 1
+    if o == .25 && even
+        dx += 1
+  else if o == -.75 || o == .75
+    dy += 1
+    if o == -.75 && odd
+        dx -= 1
+    if o == .75 && even
+        dx += 1
+  else if o == -.5
+    dx -= 1
+  else if o == .5
+    dx += 1
   for p in @board[p.x + dx][p.y + dy]
     if p.color?
       p.color = if p.color != 'green' then 'green' else 'blue'
@@ -120,15 +137,38 @@ $ ->
   @moveAnimation @thePlayer
 
 @look = (direction) ->
-  t = 0
-  if direction.up
-    t = 0
-  if direction.down
-    t = 1
-  if direction.left
-    t = 1.5
-  if direction.right
-    t = .5
+  t = @thePlayer.orientation
+  if direction.left && direction.up
+      t = -.25
+  else if direction.left && direction.down
+      t = -.75
+  else if direction.right && direction.up
+      t = .25
+  else if direction.right && direction.down
+      t = .75
+  else if direction.left
+    if t > 0
+        t *= -1
+    else
+        t = -.5
+  else if direction.right
+    if t < 0
+        t *= -1
+    else
+        t = .5
+  else if direction.up
+    if t > 0
+     t = .25
+    else
+      t = -.25
+  else if direction.down
+    if t > 0
+      t = .75
+    else
+      t = -.75
+
+  console.log t
+    
 
   @thePlayer.orientation = t
   @thePlayer.graphics.setRotation(t)
