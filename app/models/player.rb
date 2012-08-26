@@ -27,6 +27,7 @@ class Player
 
     def perform_actions(board)
         @board = board
+        return if not alive?
         actions.each do |action, parameters|
             case action
             when "move"

@@ -24,6 +24,12 @@ $ ->
             players[player.id] = player
             addPlayer player
 
+    dispatcher.bind 'player_disconnected', (player) ->
+        p = players[player.id]
+        delete players[player.id]
+        board[p.position.x][p.position.y] = []
+        dieAnimation(p)
+
     dispatcher.bind 'actions', (playerActions) ->
         for id, actions of playerActions
             player = players[id]
@@ -50,6 +56,7 @@ $ ->
         dispatcher.trigger 'act', currentActions
 
 @executeAction = (player, action, params) ->
+    return if player.status == 'dead'
     switch action
         when 'move'
             move(player, params)
