@@ -37,11 +37,35 @@ $ ->
             player = players[id]
             for action, params of actions
                 executeAction(player,action, params)
+        dispatchActions()
+
+@isObjectEmpty = (o) -> for k,v of o
+                            return false
+                        true
+@dispatchActions = ->
+    currentActions = {}
+    if currentDirection?
+        currentActions['move'] = currentDirection
+        global.currentDirection = undefined
+    if currentOrientation?
+        currentActions['look'] = currentOrientation
+        global.currentOrientation = undefined
+    if attacking?
+        currentActions['attack'] = attacking
+        global.attacking = undefined
+
+    if !isObjectEmpty currentActions
+        dispatcher.trigger 'act', currentActions
 
 @executeAction = (player, action, params) ->
     switch action
         when 'move'
-            move(player, params.direction)
+            move(player, params)
+        when 'look'
+            look(player, params)
+        when 'attack'
+            attack(player, params)
+    @playerLayer.draw()
 
 @neighbours = (player) ->
     p = player.position
@@ -57,52 +81,23 @@ $ ->
     .concat(b[x]?[y-1])
     ns
 
-@initializePlayer = () ->
-  position:
-    x: 5
-    y: 5
-  orientation: 0
-  color: 'red'
-
 @addPlayer = (player) ->
   p = player.position
   @board[p.x][p.y] = @board[p.x][p.y].concat(player)
   @drawPlayer(player)
 
-@currentDirection = {}
-@currentOrientation = {}
-
 @intendMove = (direction) ->
-  if not @currentDirection?
-    @currentDirection = {}
+  if !@currentDirection?
+      @currentDirection = {}
   @currentDirection[direction] = true
 
-  if not @moveTimer?
-    @moveTimer = setTimeout(( =>
-        @sendMove(@currentDirection)
-        @moveTimer = undefined
-        @currentDirection = {}
-    ),20)
-
-@sendMove = (direction) ->
-    @dispatcher.trigger 'act',
-        'move':
-            direction: direction
-
 @intendLook = (direction) ->
-  if not @currentOrientation?
-    @currentOrientation = {}
+  if !@currentOrientation
+      @currentOrientation = {}
   @currentOrientation[direction] = true
 
-  if not @moveTimer?
-    @lookTimer = setTimeout(( =>
-        @look(@currentOrientation)
-        @lookTimer = undefined
-        @currentOrientation = {}
-    ),50)
-
 @intendAttack = (type,target) ->
-  @attack(type, target)
+  @attacking = true
 
 @attack = (player, type, target)->
   p = player.position
@@ -202,6 +197,10 @@ $ ->
 
   player.orientation = t
   player.graphics.setRotation(t)
+
+
+@sendLook = (direction) ->
+    @addAction('look', direction: direction)
 
 @installGameKeys = ->
   key 'w', => @intendMove('up')
