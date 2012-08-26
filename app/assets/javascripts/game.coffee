@@ -129,13 +129,12 @@ $ ->
 @dropFromArray = (array, element) ->
     n = []
     for e in array
-        n.push e if e != element
+        n.push e if e.id != element.id
     n
 
 @move = (player, direction) ->
-  x = player.position.x
-  y = player.position.y
-  @board[x][y] = dropFromArray(@board[x][y], player)
+  x = oldX = player.position.x
+  y = oldY = player.position.y
   even = y % 2 == 0
   odd = y % 2 == 1
   if direction.up
@@ -159,8 +158,12 @@ $ ->
   else if direction.y
     y = direction.y
 
+  return if x < 0 || y < 0 || x == N || y == N 
+  return if @board[x][y][0]? # TODO fix in future
+
   player.position.x = x
   player.position.y = y
+  @board[oldX][oldY] = dropFromArray(@board[oldX][oldY], player)
   @board[x][y].push(player)
   @moveAnimation player
 

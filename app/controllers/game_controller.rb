@@ -33,7 +33,6 @@ class GameController < WebsocketRails::BaseController
         broadcast_message :actions, actions if @_event
     end
 
-
     def new_player
         p = Player.new
         p.id = SecureRandom.base64(16)

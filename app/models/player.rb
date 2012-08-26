@@ -1,12 +1,20 @@
 class Player
-    attr_accessor :id, :actions, :key, :position, :color, :orientation
+    attr_accessor :id, :actions, :key, :position, :color, :orientation,
+                  :hitpoints, :level, :experience
 
-    def initialize()
+    def initialize
+        @hitpoints = 3
+        @level = 1
+    end
+
+    def damage
+        level * 2
     end
 
     def as_json(opts)
         {:id => id, :actions => actions, :position => position,
-            :color => color, :orientation => orientation
+            :color => color, :orientation => orientation,
+            :hitpoints => hitpoints, :level => level, :experience => experience
         }
     end
 
@@ -28,9 +36,8 @@ class Player
     end
 
     def move(direction)
-        x = position[:x]
-        y = position[:y]
-        @board[x][y].delete self
+        x = old_x = position[:x]
+        y = old_y = position[:y]
 
         up = direction["up"]
         left = direction["left"]
@@ -59,9 +66,14 @@ class Player
             x += 1
         end
 
+        return if x < 0 || y < 0 || x == @board.length || y == @board.length
+        return if @board[x][y].any? {|t| t.is_a? Player}
+
+        @board[old_x][old_y].delete self
+        @board[x][y] << self
+
         position[:x] = x
         position[:y] = y
-        @board[x][y] << self
     end
 
     def look(direction)
