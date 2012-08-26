@@ -12,15 +12,14 @@ class GameController < WebsocketRails::BaseController
         @players = {}
         @running = true
 
-        @team_a = []
-        @team_b = []
-        @team_a_colors = TEAM_A_COLORS.dup
-        @team_b_colors = TEAM_B_COLORS.dup
+        @teams = {a: [], b: []}
+
+        @colors = {a: TEAM_A_COLORS.dup, b: TEAM_B_COLORS.dup}
 
         @t = Thread.start do
             while @running do
                 process_actions()
-                sleep 1.0 / NETWORK_SPEED #(1 / NETWORK_SPEED)
+                sleep 1.0 / NETWORK_SPEED
             end
         end
     end
@@ -66,18 +65,16 @@ class GameController < WebsocketRails::BaseController
     end
 
     def add_to_team(player)
-        team = @team_a.length <= @team_b.length ? @team_a : @team_b
-        colors = team == @team_a ? @team_a_colors : @team_b_colors
+        team = @teams[:a].length <= @teams[:b].length ? :a : :b
+        colors = @colors[team]
         player.color = colors.pop
-        player.team = team == @team_a ? 'a' : 'b'
-        @team_a << player
+        player.team = team
+        @teams[team] << player
     end
 
     def remove_from_team(player)
-        team = player.team == 'a' ? @team_a : @team_b
-        colors = team == @team_a ? @team_a_colors : @team_b_colors
-        colors.push player.color
-        team.delete player 
+        @colors[player.team].push player.color
+        @teams[player.team].delete player 
     end
 
     def player_disconnected
