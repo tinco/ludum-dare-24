@@ -1,10 +1,15 @@
 class Player
     attr_accessor :id, :actions, :key, :position, :color, :orientation,
-                  :hitpoints, :level, :experience
+                  :hitpoints, :level, :experience, :status
 
     def initialize
         @hitpoints = 3
         @level = 1
+        @status = :alive
+    end
+
+    def alive?
+        @status != :dead
     end
 
     def damage
@@ -14,7 +19,8 @@ class Player
     def as_json(opts)
         {:id => id, :actions => actions, :position => position,
             :color => color, :orientation => orientation,
-            :hitpoints => hitpoints, :level => level, :experience => experience
+            :hitpoints => hitpoints, :level => level,
+            :experience => experience, :status => status
         }
     end
 
@@ -33,6 +39,87 @@ class Player
     end
 
     def attack(parameters)
+      p = position
+      o = orientation
+      y = p[:y]
+      dx = dy = 0
+      if o == -0.25 || o == 0.25
+        dy -= 1
+        if o == -0.25 && y.odd?
+            dx -= 1
+        end
+        if o == 0.25 && y.even?
+            dx += 1
+        end
+      elsif o == -0.75 || o == 0.75
+        dy += 1
+        if o == -0.75 && y.odd?
+            dx -= 1
+        end
+        if o == 0.75 && y.even?
+            dx += 1
+        end
+      elsif o == -0.5
+        dx -= 1
+      elsif o == 0.5
+        dx += 1
+      end
+
+      opponents = @board[p[:x] + dx][p[:y] + dy] # TODO fix in future
+      puts "opponents: #{opponents}"
+      if opponent = opponents.first
+          result = opponent.take_damage damage
+          if result == :dead
+              add_experience
+          end
+          puts "#{color} attacked: #{opponent.color} for #{damage} damage"
+      end
+    end
+
+    def add_experience
+        @experience += 1
+
+        old_level = @level
+
+        if @experience >= 40
+            @level = 5
+        elsif @experience >= 20
+            @level = 4
+        elsif @experience >= 10
+            @level = 3
+        elsif @experience >= 5
+            @level = 2
+        else
+            @level = 1
+        end
+
+        if @level > old_level
+            puts "#{self} leveled up to #{@level}"
+        end
+    end
+
+    def inspect
+        "<Player: #{id},#{color}>"
+    end
+
+    def to_s
+        "#{color}"
+    end
+
+    def take_damage(amount)
+        @hitpoints -= amount
+        if @hitpoints < 1
+            die
+        end
+        @status
+    end
+
+    def die
+        @board[position[:x]][position[:y]] = []
+        position[:x] = -100
+        position[:y] = -100
+        @status = :dead
+        puts "#{color} died."
     end
 
     def move(direction)
@@ -67,13 +154,15 @@ class Player
         end
 
         return if x < 0 || y < 0 || x == @board.length || y == @board.length
-        return if @board[x][y].any? {|t| t.is_a? Player}
+        return if not @board[x][y].empty?
 
-        @board[old_x][old_y].delete self
-        @board[x][y] << self
+        @board[old_x][old_y] = []
+        @board[x][y] = [self]
 
         position[:x] = x
         position[:y] = y
+
+        puts "#{self} moved to #{x},#{y} from #{old_x}, #{old_y}"
     end
 
     def look(direction)

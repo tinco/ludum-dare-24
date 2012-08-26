@@ -3,16 +3,8 @@ N = 100
 
 $ ->
   global.board = (([] for i in [1..N]) for j in [1..N])
-  #player = initializePlayer()
-  #otherPlayer = initializePlayer()
-  #otherPlayer.position.x += 0
-  #otherPlayer.color = 'blue'
   drawScreen()
   installGameKeys()
-  #addPlayer(player)
-  #addPlayer(otherPlayer)
-  #global.thePlayer = player
-  #global.players = [player,otherPlayer]
   global.players = {}
   connectGame()
 
@@ -20,10 +12,10 @@ $ ->
     @dispatcher = new WebSocketRails('localhost:3000/websocket')
     dispatcher.on_open = (data) ->
         console.log "Connected"
+
     dispatcher.bind 'welcome', (data) ->
         global.players = data.players
         global.thePlayer = data.player
-
         for id,p of players
             addPlayer(p)
 
@@ -83,6 +75,7 @@ $ ->
 
 @addPlayer = (player) ->
   p = player.position
+  return if player.status == 'dead'
   @board[p.x][p.y] = @board[p.x][p.y].concat(player)
   @drawPlayer(player)
 
@@ -123,8 +116,40 @@ $ ->
     dx += 1
   for p in @board[p.x + dx][p.y + dy]
     if p.color?
-      p.color = if p.color != 'green' then 'green' else 'blue'
-      p.graphics.setFill p.color
+        p.hitpoints -= (2 * player.level)
+        if p.hitpoints < 1
+            @handleKill player, p
+        #p.color = if p.color != 'green' then 'green' else 'blue'
+        # p.graphics.setFill p.color
+
+@handleKill = (player, opponent) ->
+    console.log(opponent.color + ' died')
+    opponent.status = 'dead'
+    @board[opponent.position.x][opponent.position.y] = []
+    opponent.position = {x: -10, y: -10}
+    @dieAnimation(opponent)
+    increaseExperience player
+
+@increaseExperience = (player) ->
+    player.experience += 1
+
+    if player.experience >= 40
+        player.level = 5
+    else if player.experience >= 20
+        player.level = 4
+    else if player.experience >= 10
+        player.level = 3
+    else if player.experience >= 5
+        player.level = 2
+    else
+        player.level = 1
+
+@dieAnimation = (player) ->
+    player.graphics.transitionTo
+        opacity: 0
+        x: player.position.x
+        y: player.position.y
+        duration: .2
 
 @dropFromArray = (array, element) ->
     n = []
@@ -221,8 +246,8 @@ $ ->
 @drawScreen = () ->
   @stage = new Kinetic.Stage
     container: 'screen'
-    width: 640
-    height: 480
+    width: $(window).width()
+    height: $(window).height()
 
   stage.viewport =
     x: 0

@@ -5,7 +5,8 @@ class GameController < WebsocketRails::BaseController
 
     def initialize_session
         # setup game?
-        @board = Array.new(N, Array.new(N,[]))
+        @board = (1..N).map {|n| (1..N).map {|m| [] }}
+        
         @players = {}
         @running = true
 
@@ -40,6 +41,8 @@ class GameController < WebsocketRails::BaseController
         p.position = {x: 5, y: 5}
         p.color = COLORS[@players.length % COLORS.length]
         p.orientation = 0
+
+        @board[5][5] << p
 
         @players[p.id] = p
         data_store[:player] = p
