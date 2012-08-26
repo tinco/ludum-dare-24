@@ -1,6 +1,6 @@
 class Player
     attr_accessor :id, :actions, :key, :position, :color, :orientation,
-                  :hitpoints, :level, :experience, :status
+                  :hitpoints, :level, :experience, :status, :team
 
     def initialize
         @hitpoints = 3
@@ -20,7 +20,8 @@ class Player
         {:id => id, :actions => actions, :position => position,
             :color => color, :orientation => orientation,
             :hitpoints => hitpoints, :level => level,
-            :experience => experience, :status => status
+            :experience => experience, :status => status,
+            :team => team
         }
     end
 
@@ -67,7 +68,7 @@ class Player
 
       opponents = @board[p[:x] + dx][p[:y] + dy] # TODO fix in future
       puts "opponents: #{opponents}"
-      if opponent = opponents.first
+      if (opponent = opponents.first) && opponent.team != team
           result = opponent.take_damage damage
           if result == :dead
               add_experience

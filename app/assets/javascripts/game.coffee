@@ -115,7 +115,7 @@ $ ->
   else if o == .5
     dx += 1
   for p in @board[p.x + dx][p.y + dy]
-    if p.color?
+    if p.color? && p.team != player.team
         p.hitpoints -= (2 * player.level)
         if p.hitpoints < 1
             @handleKill player, p

@@ -2,6 +2,8 @@ class GameController < WebsocketRails::BaseController
     N = 100
     NETWORK_SPEED = 10 # times per second
     COLORS = ['red','blue','teal','purple','orange','brown','white', 'yellow']
+    TEAM_A_COLORS = COLORS[0..3]
+    TEAM_B_COLORS = COLORS[4..7]
 
     def initialize_session
         # setup game?
@@ -9,6 +11,11 @@ class GameController < WebsocketRails::BaseController
         
         @players = {}
         @running = true
+
+        @team_a = []
+        @team_b = []
+        @team_a_colors = TEAM_A_COLORS.dup
+        @team_b_colors = TEAM_B_COLORS.dup
 
         @t = Thread.start do
             while @running do
@@ -39,18 +46,48 @@ class GameController < WebsocketRails::BaseController
         p.id = SecureRandom.base64(16)
         p.key = SecureRandom.base64(16)
         p.position = {x: 5, y: 5}
-        p.color = COLORS[@players.length % COLORS.length]
         p.orientation = 0
 
         @board[5][5] << p
 
-        @players[p.id] = p
         data_store[:player] = p
+        @players[p.id] = p
+
+        begin
+            add_to_team(p)
+        rescue => e
+            puts e.message
+            puts e.backtrace
+        end
+
         send_message :welcome, :players => @players, :player => p
         broadcast_message :new_player, p
+        puts "#{p} joined"
+    end
+
+    def add_to_team(player)
+        team = @team_a.length <= @team_b.length ? @team_a : @team_b
+        colors = team == @team_a ? @team_a_colors : @team_b_colors
+        player.color = colors.pop
+        player.team = team == @team_a ? 'a' : 'b'
+        @team_a << player
+    end
+
+    def remove_from_team(player)
+        team = player.team == 'a' ? @team_a : @team_b
+        colors = team == @team_a ? @team_a_colors : @team_b_colors
+        colors.push player.color
+        team.delete player 
     end
 
     def player_disconnected
+        p = @players[data_store[:player].id]
+        return if p.nil?
+        @players.delete p.id
+        @board[p.position[:x]][p.position[:y]] = []
+        remove_from_team p
+        broadcast_message :player_disconnected, p
+        puts "#{p} left"
     end
 
     def act
