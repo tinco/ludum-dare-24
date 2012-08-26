@@ -3,16 +3,45 @@ N = 100
 
 $ ->
   global.board = (([] for i in [1..N]) for j in [1..N])
-  player = initializePlayer()
-  otherPlayer = initializePlayer()
-  otherPlayer.position.x += 0
-  otherPlayer.color = 'blue'
+  #player = initializePlayer()
+  #otherPlayer = initializePlayer()
+  #otherPlayer.position.x += 0
+  #otherPlayer.color = 'blue'
   drawScreen()
   installGameKeys()
-  addPlayer(player)
-  addPlayer(otherPlayer)
-  global.thePlayer = player
-  global.players = [player,otherPlayer]
+  #addPlayer(player)
+  #addPlayer(otherPlayer)
+  #global.thePlayer = player
+  #global.players = [player,otherPlayer]
+  global.players = {}
+  connectGame()
+
+@connectGame = ->
+    @dispatcher = new WebSocketRails('localhost:3000/websocket')
+    dispatcher.on_open = (data) ->
+        console.log "Connected"
+    dispatcher.bind 'welcome', (data) ->
+        global.players = data.players
+        global.thePlayer = data.player
+
+        for id,p of players
+            addPlayer(p)
+
+    dispatcher.bind 'new_player', (player) ->
+        if player.id != thePlayer.id
+            players[player.id] = player
+            addPlayer player
+
+    dispatcher.bind 'actions', (playerActions) ->
+        for id, actions of playerActions
+            player = players[id]
+            for action, params of actions
+                executeAction(player,action, params)
+
+@executeAction = (player, action, params) ->
+    switch action
+        when 'move'
+            move(player, params.direction)
 
 @neighbours = (player) ->
     p = player.position
@@ -50,10 +79,15 @@ $ ->
 
   if not @moveTimer?
     @moveTimer = setTimeout(( =>
-        @move(@currentDirection)
+        @sendMove(@currentDirection)
         @moveTimer = undefined
         @currentDirection = {}
     ),20)
+
+@sendMove = (direction) ->
+    @dispatcher.trigger 'act',
+        'move':
+            direction: direction
 
 @intendLook = (direction) ->
   if not @currentOrientation?
@@ -70,9 +104,9 @@ $ ->
 @intendAttack = (type,target) ->
   @attack(type, target)
 
-@attack = (type, target)->
-  p = @thePlayer.position
-  o = @thePlayer.orientation
+@attack = (player, type, target)->
+  p = player.position
+  o = player.orientation
   dx = dy = 0
   even = p.y % 2 == 0
   odd = p.y % 2 == 1
@@ -96,7 +130,6 @@ $ ->
     if p.color?
       p.color = if p.color != 'green' then 'green' else 'blue'
       p.graphics.setFill p.color
-      @playerLayer.draw()
 
 @dropFromArray = (array, element) ->
     n = []
@@ -104,10 +137,10 @@ $ ->
         n.push e if e != element
     n
 
-@move = (direction) ->
-  x = @thePlayer.position.x
-  y = @thePlayer.position.y
-  @board[x][y] = dropFromArray(@board[x][y], @thePlayer)
+@move = (player, direction) ->
+  x = player.position.x
+  y = player.position.y
+  @board[x][y] = dropFromArray(@board[x][y], player)
   even = y % 2 == 0
   odd = y % 2 == 1
   if direction.up
@@ -131,13 +164,13 @@ $ ->
   else if direction.y
     y = direction.y
 
-  @thePlayer.position.x = x
-  @thePlayer.position.y = y
-  @board[x][y].push(@thePlayer)
-  @moveAnimation @thePlayer
+  player.position.x = x
+  player.position.y = y
+  @board[x][y].push(player)
+  @moveAnimation player
 
-@look = (direction) ->
-  t = @thePlayer.orientation
+@look = (player, direction) ->
+  t = player.orientation
   if direction.left && direction.up
       t = -.25
   else if direction.left && direction.down
@@ -167,13 +200,8 @@ $ ->
     else
       t = -.75
 
-  console.log t
-    
-
-  @thePlayer.orientation = t
-  @thePlayer.graphics.setRotation(t)
-  @playerLayer.draw()
-
+  player.orientation = t
+  player.graphics.setRotation(t)
 
 @installGameKeys = ->
   key 'w', => @intendMove('up')
