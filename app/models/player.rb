@@ -1,11 +1,12 @@
 class Player
     attr_accessor :id, :actions, :key, :position, :color, :orientation,
-                  :hitpoints, :level, :experience, :status, :team
+                  :hitpoints, :level, :experience, :status, :team, :game
 
     def initialize
         @hitpoints = 3
         @level = 1
         @status = :alive
+        @experience = 0
     end
 
     def alive?
@@ -25,8 +26,7 @@ class Player
         }
     end
 
-    def perform_actions(board)
-        @board = board
+    def perform_actions
         return if not alive?
         actions.each do |action, parameters|
             case action
@@ -67,7 +67,7 @@ class Player
         dx += 1
       end
 
-      opponents = @board[p[:x] + dx][p[:y] + dy] # TODO fix in future
+      opponents = game.board[p[:x] + dx][p[:y] + dy] # TODO fix in future
       puts "opponents: #{opponents}"
       if (opponent = opponents.first) && opponent.team != team
           result = opponent.take_damage damage
@@ -117,7 +117,7 @@ class Player
     end
 
     def die
-        @board[position[:x]][position[:y]] = []
+        game.board[position[:x]][position[:y]] = []
         position[:x] = -100
         position[:y] = -100
         @status = :dead
@@ -155,11 +155,11 @@ class Player
             x += 1
         end
 
-        return if x < 0 || y < 0 || x == @board.length || y == @board.length
-        return if not @board[x][y].empty?
+        return if x < 0 || y < 0 || x == game.board.length || y == game.board.length
+        return if not game.board[x][y].empty?
 
-        @board[old_x][old_y] = []
-        @board[x][y] = [self]
+        game.board[old_x][old_y] = []
+        game.board[x][y] = [self]
 
         position[:x] = x
         position[:y] = y

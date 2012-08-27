@@ -2,11 +2,14 @@
 N = 100
 
 $ ->
-  global.board = (([] for i in [1..N]) for j in [1..N])
+  initializeBoard()
   drawScreen()
   installGameKeys()
   global.players = {}
   connectGame()
+
+@initializeBoard = ->
+    global.board = (([] for i in [1..N]) for j in [1..N])
 
 @connectGame = ->
     @dispatcher = new WebSocketRails('localhost:3000/websocket')
@@ -36,6 +39,30 @@ $ ->
             for action, params of actions
                 executeAction(player,action, params)
         dispatchActions()
+
+    dispatcher.bind 'victor', (victors) ->
+        alert 'A team was victorious. Congratulations if it was yours. Reload the browser to play again.'
+
+    dispatcher.bind 'new_round', (newPlayers) ->
+        initializeBoard()
+        for id,player of players
+            player.graphics.hide()
+        global.players = newPlayers
+        global.thePlayer = newPlayers[thePlayer.id]
+        for id,p of players
+            addPlayer(p)
+        console.log 'new round!'
+
+    dispatcher.bind 'game_started', (newPlayers) ->
+        initializeBoard()
+        for id,player of players
+            player.graphics.hide()
+        global.players = newPlayers
+        global.thePlayer = newPlayers[thePlayer.id]
+        for id,p of players
+            addPlayer(p)
+        console.log 'game started!'
+
 
 @isObjectEmpty = (o) -> for k,v of o
                             return false
