@@ -12,7 +12,7 @@ $ ->
     global.board = (([] for i in [1..N]) for j in [1..N])
 
 @connectGame = ->
-    @dispatcher = new WebSocketRails('localhost:3000/websocket')
+    @dispatcher = new WebSocketRails('tinco.nl:3000/websocket')
     dispatcher.on_open = (data) ->
         console.log "Connected"
 
